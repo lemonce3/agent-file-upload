@@ -6,11 +6,6 @@ const merge = require('webpack-merge');
 module.exports = merge(webpackBase, {
 	mode: 'development',
 	devtool: 'inline-source-map',
-	entry: {
-		bundle: [
-			path.resolve('test/debug.js'),
-		]
-	},
 	devServer: {
 		port: config.dev.port,
 		host: config.dev.host,
@@ -27,7 +22,8 @@ module.exports = merge(webpackBase, {
 			templateParameters: {
 				frameURL: require('./frame-server').rootFrameURL
 			},
-			inject: 'head'
+			inject: 'head',
+			chunks: ['bundle']
 		})
 	]
 });

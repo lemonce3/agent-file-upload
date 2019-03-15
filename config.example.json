@@ -9,5 +9,9 @@
 	},
 	"observer": {
 		"url": "http://localhost:8080"
+	},
+	"dialog": {
+		"height": "600px",
+		"width": "800px"
 	}
 }
