@@ -1,18 +1,33 @@
-const {utils, window: agentWindow} = require('@lemonce3/agent-core/src');
+const {utils, window: agentWindow, frame} = require('@lemonce3/agent-core/src');
 const pmc = require('@lemonce3/pmc/src');
 
 const isTop = window.top === window.self;
-const isTesting = true;
+const hasFile = !!window.File;
+
 const state = {
 	isUpload: false, target: null
 };
 
-let opener = null;
+const timer = setInterval(function () {
+	if (frame.id === null) {
+		return;
+	}
+	
+	clearInterval(timer);
 
-if (utils.isIE8) {
-	document.attachEvent('onclick', startUpload);
-} else {
-	document.addEventListener('click', startUpload, true);
+		if(frame.testing) {
+			if (utils.isIE8) {
+				document.attachEvent('onclick', startUpload);
+			} else {
+				document.addEventListener('click', startUpload, true);
+			}
+		}
+}, 100);
+
+function changeState(isUpload = false, target = null, frame = undefined) {
+	state.isUpload = isUpload;
+	state.target = target;
+	state.frame = frame;
 }
 
 function startUpload(event) {
@@ -38,12 +53,6 @@ function startUpload(event) {
 	}
 }
 
-function changeState(isUpload = false, target = null, frame = undefined) {
-	state.isUpload = isUpload;
-	state.target = target;
-	state.frame = frame;
-}
-
 pmc.on('file.upload.start', function (data, source) {
 	if (state.isUpload) {
 		return false;
@@ -55,29 +64,50 @@ pmc.on('file.upload.start', function (data, source) {
 });
 
 pmc.on('file.upload.end', function (data, source) {
-	resolveUpload(state.target, 'change');
+	resolveUpload();
 });
 
-agentWindow.program('file.upload', function () {
+agentWindow.program('file.upload', function (data) {
 	if (!state.isUpload) {
-		return;
+		// 可以强制改变状态吗？
+		return false;
 	}
 
-	// 改变文件上传状态
+	const {file} = data;
 
 	if (state.target !== null) {
-		resolveUpload(state.target, 'change');
+		resolveUpload(state.target, file);
 	} else {
-		pmc.request(state.frame, 'file.upload.end');
+		pmc.request(state.frame, 'file.upload.end', {
+			file: file
+		});
 	}
 });
 
-function resolveUpload(element, eventName) {
-	if (utils.isIE8) {
-		element.fireEvent(`on${eventName}`);
-	} else {
-		element.dispatchEvent('事件对象');
+function resolveUpload(element, file) {
+	if (inForm(element)) {
+		const input = document.createElement('input');
+
+		input.setAttribute('type', 'hidden');
+		input.setAttribute('name', `lc-${element.name}`);
+
+		element.parentNode.appendChild(input);
+	}
+
+	if (hasFile) {
 	}
 
 	changeState();
+}
+
+function inForm(element) {
+	if (!element.parentNode.tagName) {
+		return false;
+	}
+
+	if (element.parentNode.tagName === 'FORM') {
+		return true;
+	} else {
+		return inForm(element.parentNode);
+	}
 }
